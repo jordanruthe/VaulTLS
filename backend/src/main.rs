@@ -423,12 +423,7 @@ async fn rocket() -> _ {
 
     println!("Trying to use database at {}", DB_FILE_PATH);
     let db_path = std::path::Path::new(DB_FILE_PATH);
-    let db_initialized = db_path.exists();
     let db = VaulTLSDB::new(db_path).expect("Failed opening SQLite database.");
-    if !db_initialized {
-        println!("No database found. Initializing.");
-        db.initialize_db().expect("Failed initializing database");
-    }
 
     println!("Loading settings from file");
     let settings = Settings::load_from_file(None).await.expect("Failed loading settings");

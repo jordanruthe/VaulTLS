@@ -5,8 +5,12 @@ use std::path::Path;
 use std::str::FromStr;
 use argon2::password_hash::PasswordHashString;
 use rusqlite::{params, Connection, Result};
+use rusqlite_migration::Migrations;
+use include_dir::{include_dir, Dir};
 use crate::{ApiError, Certificate, User};
 use crate::data::enums::UserRole;
+
+static MIGRATIONS_DIR: Dir = include_dir!("migrations");
 
 pub(crate) struct VaulTLSDB {
     connection: Connection
@@ -14,59 +18,19 @@ pub(crate) struct VaulTLSDB {
 
 impl VaulTLSDB {
     pub(crate) fn new(db_path: &Path) -> Result<Self> {
-        let connection = Connection::open(db_path)?;
+        let mut connection = Connection::open(db_path)?;
         connection.execute("PRAGMA foreign_keys = ON", [])?;
 
         let mut perms = fs::metadata(db_path).unwrap().permissions();
         perms.set_mode(0o600);
         fs::set_permissions(db_path, perms).unwrap();
 
+        println!("Migrating database");
+        let migrations = Migrations::from_directory(&MIGRATIONS_DIR).unwrap();
+        migrations.to_latest(&mut connection).unwrap();
+
         Ok(Self { connection })
-    }
-
-    /// Initialize the database with the required tables
-    pub(crate) fn initialize_db(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.connection.execute(
-            "CREATE TABLE ca_certificates (
-                id INTEGER PRIMARY KEY,
-                created_on INTEGER NOT NULL,
-                valid_until INTEGER NOT NULL,
-                certificate BLOB,
-                key BLOB
-            )",
-            [],
-        )?;
-
-        self.connection.execute(
-            "CREATE TABLE users (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL,
-                email TEXT NOT NULL,
-                password_hash TEXT,
-                oidc_id TEXT,
-                role INTEGER NOT NULL
-            )",
-            []
-        )?;
-
-        self.connection.execute(
-            "CREATE TABLE user_certificates (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL,
-                created_on INTEGER NOT NULL,
-                valid_until INTEGER NOT NULL,
-                pkcs12 BLOB,
-                pkcs12_password TEXT NOT NULL,
-                ca_id INTEGER,
-                user_id INTEGER,
-                FOREIGN KEY(ca_id) REFERENCES ca_certificates(id) ON DELETE CASCADE,
-                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-            )",
-            [],
-        )?;
-
-        Ok(())
-    }    
+    } 
 
     /// Insert a new CA certificate into the database
     /// Adds id to the Certificate struct
