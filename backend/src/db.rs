@@ -24,7 +24,8 @@ impl VaulTLSDB {
         let db_initialized = db_path.exists();
 
         let mut connection = Connection::open(DB_FILE_PATH)?;
-        let db_secret = env::var("VAULTLS_DB_SECRET");
+        let db_secret = Self::get_db_secret();
+        println!("DB secret: {:?}", db_secret);
         if db_encrypted {
             if let Ok(ref db_secret) = db_secret {
                 connection.pragma_update(None, "key", db_secret)?;
@@ -370,5 +371,21 @@ impl VaulTLSDB {
             [],
             |_| Ok(())
         ).is_ok()
+    }
+
+    // Get database secret
+    fn get_db_secret() -> Result<String, Box<dyn std::error::Error>> {
+        let val = env::var("VAULTLS_DB_SECRET")?;
+        println!("VAULTLS_DB_SECRET: {}", val);
+    
+        // If the var starts with "/run/secrets/", treat it as a file path
+        if val.starts_with("/run/secrets/") {
+            let contents = fs::read_to_string(val)?.trim().to_string();
+            println!("Contents: {}", contents);
+            Ok(contents)
+        } else {
+            println!("Val: {}", val);
+            Ok(val)
+        }
     }
 }
