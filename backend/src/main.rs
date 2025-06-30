@@ -477,7 +477,17 @@ async fn rocket() -> _ {
         },
         false => None
     };
-    let rocket_secret = env::var("VAULTLS_API_SECRET").expect("VAULTLS_API_SECRET is not set");
+    let rocket_secret = {
+        let val = env::var("VAULTLS_API_SECRET").expect("VAULTLS_API_SECRET is not set");
+        if val.starts_with("/run/secrets/") {
+            fs::read_to_string(&val)
+                .expect("Failed to read secret file for VAULTLS_API_SECRET")
+                .trim()
+                .to_string()
+        } else {
+            val
+        }
+    };   
     unsafe { env::set_var("ROCKET_SECRET_KEY", rocket_secret) }
 
     let app_state = AppState {

@@ -37,8 +37,6 @@ podman run -d \
 ### Encrypting the Database
 By specifying the `VAULTLS_DB_SECRET` environmental variable, the database is encrypted. Data is retained. It is not possible to go back.
 
-To leverage Docker Secrets, you may set `VAULTLS_DB_SECRET` to a secret file, such as `/run/secrets/VAULTLS_DB_SECRET`.
-
 ### Setting up OIDC
 To set up OIDC you need to create a new client in your authentication provider. For Authelia a configuration could look like this
 ```yaml
@@ -66,6 +64,12 @@ For VaulTLS the required variables can be configured via environmental variables
 | `VAULTLS_OIDC_SECRET`       | `[client_secret]`                                    |
 
 If VaulTLS claims that OIDC is not configured, the most likely cause is that it couldn't discover the OIDC provider based on the `VAULTLS_OIDC_AUTH_URL` given. In general the the base url to the auth provider should be enough. For Authentik the required URL path is `/application/o/<application slug>/`. If that doesn't work, directly specify the .well_known url. 
+
+### Docker Secrets
+Certain environment variables can be Docker Secrets instead of regular variables. To leverage Docker Secrets, you may set the environment variable to a secret file, such as `/run/secrets/VAULTLS_DB_SECRET`. The following variables support secrets:
+- VAULTLS_API_SECRET
+- VAULTLS_DB_SECRET
+- VAULTLS_OIDC_SECRET
 
 ## Usage
 During the first setup a Certificate Authority is automatically created. If OIDC is configured no password needs to be set.

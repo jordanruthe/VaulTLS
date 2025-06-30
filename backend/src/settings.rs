@@ -109,7 +109,17 @@ impl OIDC {
     fn load_from_env(&mut self) {
         let get_env = || -> Result<OIDC, VarError> {
             let id = env::var("VAULTLS_OIDC_ID")?;
-            let secret = env::var("VAULTLS_OIDC_SECRET")?;
+            let secret = {
+                let val = env::var("VAULTLS_OIDC_SECRET").expect("VAULTLS_API_SECRET is not set");
+                if val.starts_with("/run/secrets/") {
+                    fs::read_to_string(&val)
+                        .expect("Failed to read secret file for VAULTLS_OIDC_SECRET")
+                        .trim()
+                        .to_string()
+                } else {
+                    val
+                }
+            };   
             let auth_url = env::var("VAULTLS_OIDC_AUTH_URL")?;
             let callback_url = env::var("VAULTLS_OIDC_CALLBACK_URL")?;
             Ok(OIDC{ id, secret, auth_url, callback_url })
