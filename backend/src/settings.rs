@@ -1,5 +1,4 @@
 use std::{env, fs};
-use std::env::VarError;
 use argon2::password_hash::rand_core::{OsRng, RngCore};
 use openssl::base64;
 use rocket::serde;
@@ -11,6 +10,7 @@ use crate::data::enums::{MailEncryption, PasswordRule};
 use crate::constants::SETTINGS_FILE_PATH;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
+use crate::helper::get_secret;
 
 /// Settings for the backend.
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
@@ -107,19 +107,9 @@ pub(crate) struct OIDC {
 impl OIDC {
     /// Replace OIDC settings with environment variables.
     fn load_from_env(&mut self) {
-        let get_env = || -> Result<OIDC, VarError> {
+        let get_env = || -> anyhow::Result<OIDC> {
             let id = env::var("VAULTLS_OIDC_ID")?;
-            let secret = {
-                let val = env::var("VAULTLS_OIDC_SECRET").expect("VAULTLS_API_SECRET is not set");
-                if val.starts_with("/run/secrets/") {
-                    fs::read_to_string(&val)
-                        .expect("Failed to read secret file for VAULTLS_OIDC_SECRET")
-                        .trim()
-                        .to_string()
-                } else {
-                    val
-                }
-            };   
+            let secret = get_secret("VAULTLS_OIDC_SECRET")?;
             let auth_url = env::var("VAULTLS_OIDC_AUTH_URL")?;
             let callback_url = env::var("VAULTLS_OIDC_CALLBACK_URL")?;
             Ok(OIDC{ id, secret, auth_url, callback_url })

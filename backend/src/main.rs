@@ -22,7 +22,7 @@ use crate::data::api::{CallbackQuery, ChangePasswordRequest, CreateCertificateRe
 use crate::data::enums::UserRole;
 use crate::data::error::ApiError;
 use crate::data::enums::PasswordRule;
-use crate::helper::{hash_password, hash_password_string};
+use crate::helper::{get_secret, hash_password, hash_password_string};
 use crate::notification::{MailMessage, Mailer};
 use auth::oidc_auth::OidcAuth;
 use crate::auth::password_auth::verify_password;
@@ -477,17 +477,7 @@ async fn rocket() -> _ {
         },
         false => None
     };
-    let rocket_secret = {
-        let val = env::var("VAULTLS_API_SECRET").expect("VAULTLS_API_SECRET is not set");
-        if val.starts_with("/run/secrets/") {
-            fs::read_to_string(&val)
-                .expect("Failed to read secret file for VAULTLS_API_SECRET")
-                .trim()
-                .to_string()
-        } else {
-            val
-        }
-    };   
+    let rocket_secret = get_secret("VAULTLS_API_SECRET").expect("Failed to get VAULTLS_API_SECRET");
     unsafe { env::set_var("ROCKET_SECRET_KEY", rocket_secret) }
 
     let app_state = AppState {
